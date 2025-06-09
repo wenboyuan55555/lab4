@@ -1,0 +1,180 @@
+为了为ATM系统生成完整的需求模型，我们将根据描述创建用例图、系统顺序图、概念类图，以及定义关键操作的OCL合约。
+
+### 1. 用例图
+
+**主要参与者**：
+- 客户（Customer）
+
+**主要用例**：
+- 登录（Login）
+- 查询账户余额（Check Balance）
+- 取款（Withdraw Cash）
+- 存款（Deposit Cash）
+- 转账（Transfer Funds）
+- 打印收据（Print Receipt）
+- 退出会话（Timeout）
+
+**用例图**：
+```
++------------------+
+|      ATM System  |
++------------------+
+|                  |
+|  +--------------+|
+|  |  <<actor>>   ||
+|  |   Customer   ||
+|  +--------------+|
+|                  |
+|  +------------------------+  +--------------------------+
+|  | Login                  |  | Check Balance            |
+|  +------------------------+  +--------------------------+
+|  | Withdraw Cash          |  | Deposit Cash             |
+|  +------------------------+  +--------------------------+
+|  | Transfer Funds         |  | Print Receipt            |
+|  +------------------------+  +--------------------------+
+|  | Timeout                |  
+|  +------------------------+
++------------------+
+```
+
+### 2. 系统顺序图
+
+**登录用例**
+```
+Customer -> ATM: insertCard()
+ATM -> Customer: requestPIN()
+Customer -> ATM: enterPIN()
+ATM -> Bank: verifyPIN(card, PIN)
+Bank -> ATM: verificationResult
+ATM -> Customer: displayOptions()
+```
+
+**查询账户余额用例**
+```
+Customer -> ATM: selectCheckBalance()
+ATM -> Bank: getBalance(account)
+Bank -> ATM: balance
+ATM -> Customer: displayBalance(balance)
+```
+
+**取款用例**
+```
+Customer -> ATM: selectWithdrawCash(amount)
+ATM -> Bank: verifyFunds(account, amount)
+Bank -> ATM: verificationResult
+ATM -> Customer: dispenseCash(amount)
+ATM -> Customer: askPrintReceipt()
+```
+
+**存款用例**
+```
+Customer -> ATM: selectDepositCash(amount)
+ATM -> Customer: acceptCash(amount)
+ATM -> Bank: updateBalance(account, amount)
+Bank -> ATM: updateResult
+ATM -> Customer: askPrintReceipt()
+```
+
+**转账用例**
+```
+Customer -> ATM: selectTransferFunds(targetAccount, amount)
+ATM -> Bank: verifyFunds(account, amount)
+Bank -> ATM: verificationResult
+ATM -> Bank: transferFunds(account, targetAccount, amount)
+Bank -> ATM: transferResult
+ATM -> Customer: askPrintReceipt()
+```
+
+**打印收据用例**
+```
+Customer -> ATM: selectPrintReceipt()
+ATM -> Customer: printReceipt(transactionDetails)
+```
+
+### 3. 概念类图
+
+**主要类**：
+- 客户（Customer）
+  - 属性：customerID, cardNumber, PIN
+- ATM
+  - 属性：location, status
+- 账户（Account）
+  - 属性：accountNumber, balance
+- 银行（Bank）
+  - 属性：name, accounts
+- 交易（Transaction）
+  - 属性：transactionID, type, amount, date
+
+**关系**：
+- 客户与账户之间存在关联关系，一个客户可以有多个账户。
+- ATM通过银行卡与客户交互。
+- 银行管理多个账户和处理交易。
+
+```
++-------------------+       +------------------+
+|    Customer       |       |     Account      |
++-------------------+       +------------------+
+| - customerID      |<>-----| - accountNumber  |
+| - cardNumber      |       | - balance        |
+| - PIN             |       +------------------+
++-------------------+               
+        |                                   
+        |                                    
+        |                                    
++-------------------+       +------------------+
+|      ATM          |       |      Bank        |
++-------------------+       +------------------+
+| - location        |       | - name           |
+| - status          |       | - accounts       |
++-------------------+       +------------------+
+        |                                   
+        |                                    
+        |                                    
++-------------------+
+|   Transaction     |
++-------------------+
+| - transactionID   |
+| - type            |
+| - amount          |
+| - date            |
++-------------------+
+```
+
+### 4. OCL合约
+
+**登录操作**：
+```ocl
+context ATM::verifyPIN(card: Card, PIN: String) : Boolean
+pre: card.isInserted() and PIN.size() = 4
+post: result = (card.owner.PIN = PIN)
+```
+
+**查询账户余额操作**：
+```ocl
+context ATM::getBalance(account: Account) : Real
+pre: account.owner = self.currentCustomer
+post: result = account.balance
+```
+
+**取款操作**：
+```ocl
+context ATM::verifyFunds(account: Account, amount: Real) : Boolean
+pre: amount > 0
+post: result = (account.balance >= amount)
+```
+
+**存款操作**：
+```ocl
+context ATM::updateBalance(account: Account, amount: Real)
+pre: amount > 0
+post: account.balance = account.balance@pre + amount
+```
+
+**转账操作**：
+```ocl
+context ATM::transferFunds(account: Account, targetAccount: Account, amount: Real)
+pre: amount > 0 and account.balance >= amount
+post: account.balance = account.balance@pre - amount and targetAccount.balance = targetAccount.balance@pre + amount
+```
+
+这些模型和合约为ATM系统的需求提供了详细的描述，通过UML图和OCL合约明确了系统的结构和行为。
